@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberSecurity Dashboard</title>
+
+    <!-- Load Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Custom CSS -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1E1E2F; /* Dark Blue-Gray */
+            color: #ffffff;
+            text-align: center;
+            padding: 20px;
+        }
+        h1 {
+            color: #FFD700; /* Gold */
+        }
+        .btn {
+            background: linear-gradient(to right, #007bff, #00c6ff); /* Gradient Blue */
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 25px;
+            margin: 10px;
+            transition: 0.3s;
+        }
+        .btn:hover {
+            background: linear-gradient(to right, #0056b3, #0084b3);
+            transform: scale(1.05);
+        }
+        #logs-container, #chart-container {
+            display: none;
+            background: rgba(255, 255, 255, 0.1); /* Semi-transparent */
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 80%;
+            margin: auto;
+            overflow: auto;
+            box-shadow: 0px 0px 15px rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease-in-out;
+        }
+        pre {
+            text-align: left;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #ddd;
+        }
+        canvas {
+            background: #ffffff;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>CyberSecurity Dashboard</h1>
+
+    <!-- Toggle Buttons -->
+    <button class="btn" onclick="toggleLogs()">Fetch Logs</button>
+    <button class="btn" onclick="toggleChart()">Show Data Visualization</button>
+    
+    <!-- Logs Display Container -->
+    <div id="logs-container">
+        <h3>Fetched Logs</h3>
+        <pre id="logs"></pre>
+    </div>
+
+    <!-- Chart Container -->
+    <div id="chart-container">
+        <h2>Log Data Visualization</h2>
+        <canvas id="logChart"></canvas>
+    </div>
+
+    <script>
+        let logsVisible = false;
+        let chartVisible = false;
+
+        function toggleLogs() {
+            const logsContainer = document.getElementById('logs-container');
+            if (logsVisible) {
+                logsContainer.style.display = "none";
+                logsVisible = false;
+            } else {
+                logsContainer.style.display = "block";
+                fetchLogs();
+                logsVisible = true;
+            }
+        }
+
+        function toggleChart() {
+            const chartContainer = document.getElementById('chart-container');
+            if (chartVisible) {
+                chartContainer.style.display = "none";
+                chartVisible = false;
+            } else {
+                chartContainer.style.display = "block";
+                fetchLogs(); // Fetch logs when showing chart
+                chartVisible = true;
+            }
+        }
+
+        function fetchLogs() {
+            fetch('http://127.0.0.1:5000/logs')  // API Call
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('logs').textContent = JSON.stringify(data, null, 2);
+
+                    // Extract Data for Chart
+                    let timestamps = data.map(log => log.timestamp);  // X-axis Labels
+                    let levels = data.map(log => log.level);  // INFO, WARNING, ERROR
+
+                    // Convert Log Levels to Numeric Values
+                    let levelValues = levels.map(level => 
+                        level === "ERROR" ? 3 : 
+                        level === "WARNING" ? 2 : 
+                        1
+                    );
+
+                    // Clear existing chart before creating a new one
+                    const chartCanvas = document.getElementById('logChart');
+                    chartCanvas.innerHTML = "";  // Reset Canvas
+
+                    const ctx = chartCanvas.getContext('2d');
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: timestamps,  // X-axis
+                            datasets: [{
+                                label: 'Log Levels',
+                                data: levelValues,  // Y-axis Values
+                                backgroundColor: levelValues.map(val => 
+                                    val === 3 ? 'red' : 
+                                    val === 2 ? 'orange' : 
+                                    'blue'
+                                )
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                y: {
+                                    ticks: {
+                                        callback: function(value) {
+                                            return value === 3 ? 'ERROR' : 
+                                                   value === 2 ? 'WARNING' : 
+                                                   'INFO';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                })
+                .catch(error => console.error('Error fetching logs:', error));
+        }
+    </script>
+
+</body>
+</html>
